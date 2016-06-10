@@ -26,16 +26,33 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 public class FeeBooster extends Application {
 
     private Stage stage;
+    private EventHandler cancelEvent = new EventHandler<ActionEvent>() {
+        @Override
+        public void handle(ActionEvent event) {
+            Alert alert = new Alert(Alert.AlertType.WARNING, "Are you sure you want to exit?");
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                System.exit(0);
+            }
+        }
+    };
+    private List<Scene> scenes = new ArrayList<Scene>();
+    private int sceneCursor = 0;
+    private boolean rbf = false;
 
     public static void main(String[] args) {
         launch(args);
@@ -82,7 +99,6 @@ public class FeeBooster extends Application {
 
         // Next Button
         Button nextBtn = new Button("Next");
-        grid.add(nextBtn, 2, 7);
         nextBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -110,20 +126,53 @@ public class FeeBooster extends Application {
 
                     }
 
+                    Scene scene = null;
                     if (rbfRadio.isSelected())
-                        stage.setScene(new Scene(rbfGrid(tx), 800, 500));
-                    else if (cpfpRadio.isSelected())
-                        stage.setScene(new Scene(cpfpGrid(tx), 800, 500));
+                        if(sceneCursor == scenes.size() - 1 || !rbf)
+                        {
+                            scene = new Scene(rbfGrid(tx), 800, 500);
+                            if(!rbf) {
+                                scenes.clear();
+                                scenes.add(stage.getScene());
+                            }
+                            rbf = true;
+                        }
+                    if (cpfpRadio.isSelected())
+                        if(sceneCursor == scenes.size() - 1 || rbf)
+                        {
+                            scene = new Scene(cpfpGrid(tx), 800, 500);
+                            if(rbf){
+                                scenes.clear();
+                                scenes.add(stage.getScene());
+                            }
+                            rbf = false;
+                        }
+
+                    if(sceneCursor != scenes.size() - 1)
+                        scene = scenes.get(sceneCursor + 1);
+                    else
+                        scenes.add(scene);
+                    sceneCursor++;
+                    stage.setScene(scene);
                 } else {
                     Alert alert = new Alert(Alert.AlertType.ERROR, "Please enter a valid transaction");
                     alert.showAndWait();
                 }
             }
         });
+        HBox btnHbox = new HBox(10);
+        btnHbox.getChildren().add(nextBtn);
+
+        // Cancel Button
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setOnAction(cancelEvent);
+        btnHbox.getChildren().add(cancelBtn);
+        grid.add(btnHbox, 2, 7);
 
 
         // Display everything
         Scene scene = new Scene(grid, 800, 500);
+        scenes.add(scene);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
@@ -235,9 +284,37 @@ public class FeeBooster extends Application {
         nextBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                stage.setScene(new Scene(unsignedTxGrid(tx), 800, 500));
+                if(sceneCursor == scenes.size() - 1) {
+                    Scene scene = new Scene(unsignedTxGrid(tx), 800, 500);
+                    scenes.add(scene);
+                    sceneCursor++;
+                    stage.setScene(scene);
+                }
+                else {
+                    sceneCursor++;
+                    stage.setScene(scenes.get(sceneCursor));
+                }
             }
         });
+        HBox btnHbox = new HBox(10);
+
+        // Back Button
+        Button backBtn = new Button("Back");
+        backBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                sceneCursor--;
+                stage.setScene(scenes.get(sceneCursor));
+            }
+        });
+        btnHbox.getChildren().add(backBtn);
+        btnHbox.getChildren().add(nextBtn);
+
+        // Cancel Button
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setOnAction(cancelEvent);
+        btnHbox.getChildren().add(cancelBtn);
+        grid.add(btnHbox, 1, gridheight);
 
         return grid;
     }
@@ -327,58 +404,82 @@ public class FeeBooster extends Application {
 
         // Next Button
         Button nextBtn = new Button("Next");
-        grid.add(nextBtn, 1, gridheight);
         nextBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
 
-                // Referenced output
-                int output = (int) outputGroup.getSelectedToggle().getUserData();
-                TxOutput refout = tx.getOutputs().get(output);
+                if(sceneCursor == scenes.size() - 1) {
+                    // Referenced output
+                    int output = (int) outputGroup.getSelectedToggle().getUserData();
+                    TxOutput refout = tx.getOutputs().get(output);
 
-                // Create output for CPFP transaction
-                TxOutput out = null;
-                long outval = refout.getValue() - ((Double)feeSpin.getValue()).longValue();
-                if(Utils.validateAddress(outAddr.getText()))
-                {
-                    byte[] decodedAddr = Utils.base58Decode(outAddr.getText());
-                    boolean isP2SH = decodedAddr[0] == 0x00;
-                    byte[] hash160 = Arrays.copyOfRange(decodedAddr, 1, decodedAddr.length - 4);
-                    if(isP2SH)
-                    {
-                        byte[] script = new byte[hash160.length + 3];
-                        script[0] = (byte)0xa9;
-                        script[1] = (byte) 0x14;
-                        System.arraycopy(hash160, 0, script, 2, hash160.length);
-                        script[script.length - 1] = (byte)0x87;
-                        out = new TxOutput(outval, script);
+                    // Create output for CPFP transaction
+                    TxOutput out = null;
+                    long outval = refout.getValue() - ((Double) feeSpin.getValue()).longValue();
+                    if (Utils.validateAddress(outAddr.getText())) {
+                        byte[] decodedAddr = Utils.base58Decode(outAddr.getText());
+                        boolean isP2SH = decodedAddr[0] == 0x00;
+                        byte[] hash160 = Arrays.copyOfRange(decodedAddr, 1, decodedAddr.length - 4);
+                        if (isP2SH) {
+                            byte[] script = new byte[hash160.length + 3];
+                            script[0] = (byte) 0xa9;
+                            script[1] = (byte) 0x14;
+                            System.arraycopy(hash160, 0, script, 2, hash160.length);
+                            script[script.length - 1] = (byte) 0x87;
+                            out = new TxOutput(outval, script);
+                        } else {
+                            byte[] script = new byte[hash160.length + 5];
+                            script[0] = (byte) 0x76;
+                            script[1] = (byte) 0xa9;
+                            script[2] = (byte) 0x14;
+                            System.arraycopy(hash160, 0, script, 3, hash160.length);
+                            script[script.length - 2] = (byte) 0x88;
+                            script[script.length - 1] = (byte) 0xac;
+                            out = new TxOutput(outval, script);
+                        }
+                    } else {
+                        Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid Address");
+                        alert.showAndWait();
                     }
-                    else
-                    {
-                        byte[] script = new byte[hash160.length + 5];
-                        script[0] = (byte)0x76;
-                        script[1] = (byte)0xa9;
-                        script[2] = (byte)0x14;
-                        System.arraycopy(hash160, 0, script, 3, hash160.length);
-                        script[script.length - 2] = (byte)0x88;
-                        script[script.length - 1] = (byte)0xac;
-                        out = new TxOutput(outval, script);
-                    }
+
+                    // Create CPFP Transaction
+                    Transaction cpfpTx = new Transaction();
+                    TxInput in = new TxInput(tx.getHash(), output, new byte[]{(0x00)}, 0xffffffff);
+                    cpfpTx.addOutput(out);
+                    cpfpTx.addInput(in);
+
+                    // Create Scene
+                    Scene scene = new Scene(unsignedTxGrid(cpfpTx), 800, 500);
+                    scenes.add(scene);
+                    sceneCursor++;
+                    stage.setScene(scene);
                 }
                 else
                 {
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid Address");
-                    alert.showAndWait();
+                    sceneCursor++;
+                    stage.setScene(scenes.get(sceneCursor));
                 }
-
-                // Create CPFP Transaction
-                Transaction cpfpTx = new Transaction();
-                TxInput in = new TxInput(tx.getHash(), output, new byte[]{(0x00)}, 0xffffffff);
-                cpfpTx.addOutput(out);
-                cpfpTx.addInput(in);
-                stage.setScene(new Scene(unsignedTxGrid(cpfpTx), 800, 500));
             }
         });
+        HBox btnHbox = new HBox(10);
+
+        // Back Button
+        Button backBtn = new Button("Back");
+        backBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                sceneCursor--;
+                stage.setScene(scenes.get(sceneCursor));
+            }
+        });
+        btnHbox.getChildren().add(backBtn);
+        btnHbox.getChildren().add(nextBtn);
+
+        // Cancel Button
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setOnAction(cancelEvent);
+        btnHbox.getChildren().add(cancelBtn);
+        grid.add(btnHbox, 1, gridheight);
 
         return grid;
     }
@@ -417,16 +518,43 @@ public class FeeBooster extends Application {
 
         // Add Next Button
         Button nextBtn = new Button("Next");
-        grid.add(nextBtn, 0, 4);
         nextBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 //if(signHereRadio.isSelected())
                 //    stage.setScene(new Scene(signTxGrid(tx), 800, 500));
                 //else if(signWalletRadio.isSelected())
-                    stage.setScene(new Scene(broadcastTxGrid(tx), 800, 500));
+                if(sceneCursor == scenes.size() - 1) {
+                    Scene scene = new Scene(broadcastTxGrid(tx), 800, 500);
+                    scenes.add(scene);
+                    sceneCursor++;
+                    stage.setScene(scene);
+                }
+                else {
+                    sceneCursor++;
+                    stage.setScene(scenes.get(sceneCursor));
+                }
             }
         });
+        HBox btnHbox = new HBox(10);
+
+        // Back Button
+        Button backBtn = new Button("Back");
+        backBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                sceneCursor--;
+                stage.setScene(scenes.get(sceneCursor));
+            }
+        });
+        btnHbox.getChildren().add(backBtn);
+        btnHbox.getChildren().add(nextBtn);
+
+        // Cancel Button
+        Button cancelBtn = new Button("Cancel");
+        cancelBtn.setOnAction(cancelEvent);
+        btnHbox.getChildren().add(cancelBtn);
+        grid.add(btnHbox, 0, 2);
 
         return grid;
     }
@@ -472,7 +600,6 @@ public class FeeBooster extends Application {
 
         // Add Next Button
         Button nextBtn = new Button("Send Transaction");
-        grid.add(nextBtn, 0, 2);
         nextBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -481,6 +608,25 @@ public class FeeBooster extends Application {
                 Broadcaster.broadcastTransaction(Transaction.serialize(signedTx, false));
             }
         });
+        HBox btnHbox = new HBox(10);
+
+        // Back Button
+        Button backBtn = new Button("Back");
+        backBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                sceneCursor--;
+                stage.setScene(scenes.get(sceneCursor));
+            }
+        });
+        btnHbox.getChildren().add(backBtn);
+        btnHbox.getChildren().add(nextBtn);
+
+        // Cancel Button
+        Button cancelBtn = new Button("Exit");
+        cancelBtn.setOnAction(cancelEvent);
+        btnHbox.getChildren().add(cancelBtn);
+        grid.add(btnHbox, 0, 2);
 
 
         return grid;
