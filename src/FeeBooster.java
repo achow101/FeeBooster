@@ -31,6 +31,8 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.json.JSONObject;
 
+import java.util.Arrays;
+
 public class FeeBooster extends Application {
 
     private Stage stage;
@@ -272,13 +274,13 @@ public class FeeBooster extends Application {
         }
 
         // Fee
-        Text fee = new Text("Fee Paid: " + tx.getFee() + " Satoshis");
+        Text fee = new Text("Fee to Pay: " + tx.getFee() + " Satoshis");
         grid.add(fee, 0, gridheight);
 
         // Recommended fee from bitcoinfees.21.co
         JSONObject apiResult = Utils.getFromAnAPI("http://bitcoinfees.21.co/api/v1/fees/recommended", "GET");
         int fastestFee = apiResult.getInt("fastestFee");
-        long recommendedFee = fastestFee * tx.getSize();
+        long recommendedFee = fastestFee * tx.getSize() + fastestFee * 300;
         Text recFeeTxt = new Text("Recommended Fee: " + recommendedFee + " Satoshis");
         grid.add(recFeeTxt, 1, gridheight);
         gridheight += 2;
@@ -299,16 +301,7 @@ public class FeeBooster extends Application {
                 double newVal = (double) newValue;
                 Double step = newVal - oldVal;
                 tx.setFee(tx.getFee() + step.longValue());
-                fee.setText("Fee Paid: " + tx.getFee() + " Satoshis");
-                int output = (int) outputGroup.getSelectedToggle().getUserData();
-                TxOutput out = tx.getOutputs().get(output);
-                out.decreaseValueBy(step.longValue());
-                for (int i = 0; i < grid.getChildren().size(); i++) {
-                    Node child = grid.getChildren().get(i);
-                    if (grid.getRowIndex(child) == output + 1 && grid.getColumnIndex(child) == 1) {
-                        ((Text) child).setText("Amount " + out.getValue() + " Satoshis\nAddress: " + out.getAddress());
-                    }
-                }
+                fee.setText("Fee to Pay: " + tx.getFee() + " Satoshis");
             }
         });
 
@@ -325,13 +318,65 @@ public class FeeBooster extends Application {
             }
         });
 
+        // Output address
+        Label recvAddr = new Label("Address to pay to");
+        grid.add(recvAddr, 0, gridheight);
+        TextField outAddr = new TextField();
+        grid.add(outAddr, 1, gridheight);
+        gridheight++;
+
         // Next Button
         Button nextBtn = new Button("Next");
         grid.add(nextBtn, 1, gridheight);
         nextBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                stage.setScene(new Scene(unsignedTxGrid(tx), 800, 500));
+
+                // Referenced output
+                int output = (int) outputGroup.getSelectedToggle().getUserData();
+                TxOutput refout = tx.getOutputs().get(output);
+
+                // Create output for CPFP transaction
+                TxOutput out = null;
+                long outval = refout.getValue() - ((Double)feeSpin.getValue()).longValue();
+                if(Utils.validateAddress(outAddr.getText()))
+                {
+                    byte[] decodedAddr = Utils.base58Decode(outAddr.getText());
+                    boolean isP2SH = decodedAddr[0] == 0x00;
+                    byte[] hash160 = Arrays.copyOfRange(decodedAddr, 1, decodedAddr.length - 4);
+                    if(isP2SH)
+                    {
+                        byte[] script = new byte[hash160.length + 3];
+                        script[0] = (byte)0xa9;
+                        script[1] = (byte) 0x14;
+                        System.arraycopy(hash160, 0, script, 2, hash160.length);
+                        script[script.length - 1] = (byte)0x87;
+                        out = new TxOutput(outval, script);
+                    }
+                    else
+                    {
+                        byte[] script = new byte[hash160.length + 5];
+                        script[0] = (byte)0x76;
+                        script[1] = (byte)0xa9;
+                        script[2] = (byte)0x14;
+                        System.arraycopy(hash160, 0, script, 3, hash160.length);
+                        script[script.length - 2] = (byte)0x88;
+                        script[script.length - 1] = (byte)0xac;
+                        out = new TxOutput(outval, script);
+                    }
+                }
+                else
+                {
+                    Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid Address");
+                    alert.showAndWait();
+                }
+
+                // Create CPFP Transaction
+                Transaction cpfpTx = new Transaction();
+                TxInput in = new TxInput(tx.getHash(), output, new byte[]{(0x00)}, 0xffffffff);
+                cpfpTx.addOutput(out);
+                cpfpTx.addInput(in);
+                stage.setScene(new Scene(unsignedTxGrid(cpfpTx), 800, 500));
             }
         });
 

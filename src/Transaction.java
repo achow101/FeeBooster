@@ -24,7 +24,7 @@ import java.util.List;
 
 public class Transaction {
 
-    private int version = 0;
+    private int version = 1;
     private long numInputs = 0;
     private long numOutputs = 0;
     private List<TxInput> inputs = new ArrayList<TxInput>();
@@ -65,10 +65,12 @@ public class Transaction {
 
     public void addInput(TxInput in) {
         inputs.add(in);
+        numInputs++;
     }
 
     public void addOutput(TxOutput out) {
         outputs.add(out);
+        numOutputs++;
     }
 
     public void setLocktime(int locktime) {
@@ -153,7 +155,6 @@ public class Transaction {
 
             // Get the number of inputs
             long numIns = Utils.parseVarInt(txBytes, cursor);
-            tx.setNumInputs(numIns);
             cursor += Utils.varIntLen(txBytes, cursor);
 
             // Get inputs
@@ -185,7 +186,6 @@ public class Transaction {
 
             // Get the number of outputs
             long numOuts = Utils.parseVarInt(txBytes, cursor);
-            tx.setNumOutputs(numOuts);
             cursor += Utils.varIntLen(txBytes, cursor);
 
             // Get Outputs

@@ -257,4 +257,39 @@ public class Utils {
 
         return new JSONObject("{\"Error\":\"Failed\"}");
     }
+
+    public static boolean validateAddress(String addr) {
+        if (addr.length() < 26 || addr.length() > 35) return false;
+        byte[] decoded = base58Decode(addr);
+        if (decoded == null) return false;
+
+        byte[] checksumHash = new byte[4];
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            checksumHash = digest.digest(digest.digest(Arrays.copyOfRange(decoded, 0, 21)));
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+
+        return Arrays.equals(Arrays.copyOfRange(checksumHash, 0, 4), Arrays.copyOfRange(decoded, 21, 25));
+    }
+
+    private final static String ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+    public static byte[] base58Decode(String input) {
+        byte[] output = new byte[25];
+        for (int i = 0; i < input.length(); i++) {
+            char t = input.charAt(i);
+
+            int p = ALPHABET.indexOf(t);
+            if (p == -1) return null;
+            for (int j = 25 - 1; j > 0; j--, p /= 256) {
+                p += 58 * (output[j] & 0xFF);
+                output[j] = (byte) (p % 256);
+            }
+            if (p != 0) return null;
+        }
+
+        return output;
+    }
+
 }
