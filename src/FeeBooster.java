@@ -130,7 +130,7 @@ public class FeeBooster extends Application {
                     if (rbfRadio.isSelected())
                         if(sceneCursor == scenes.size() - 1 || !rbf)
                         {
-                            scene = new Scene(rbfGrid(tx), 800, 500);
+                            scene = new Scene(rbfGrid(tx), 900, 500);
                             if(!rbf) {
                                 scenes.clear();
                                 scenes.add(stage.getScene());
@@ -140,7 +140,7 @@ public class FeeBooster extends Application {
                     if (cpfpRadio.isSelected())
                         if(sceneCursor == scenes.size() - 1 || rbf)
                         {
-                            scene = new Scene(cpfpGrid(tx), 800, 500);
+                            scene = new Scene(cpfpGrid(tx), 900, 500);
                             if(rbf){
                                 scenes.clear();
                                 scenes.add(stage.getScene());
@@ -171,7 +171,7 @@ public class FeeBooster extends Application {
 
 
         // Display everything
-        Scene scene = new Scene(grid, 800, 500);
+        Scene scene = new Scene(grid, 900, 500);
         scenes.add(scene);
         primaryStage.setScene(scene);
         primaryStage.show();
@@ -285,7 +285,7 @@ public class FeeBooster extends Application {
             @Override
             public void handle(ActionEvent event) {
                 if(sceneCursor == scenes.size() - 1) {
-                    Scene scene = new Scene(unsignedTxGrid(tx), 800, 500);
+                    Scene scene = new Scene(unsignedTxGrid(tx), 900, 500);
                     scenes.add(scene);
                     sceneCursor++;
                     stage.setScene(scene);
@@ -440,6 +440,7 @@ public class FeeBooster extends Application {
                     } else {
                         Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid Address");
                         alert.showAndWait();
+                        return;
                     }
 
                     // Create CPFP Transaction
@@ -449,7 +450,7 @@ public class FeeBooster extends Application {
                     cpfpTx.addInput(in);
 
                     // Create Scene
-                    Scene scene = new Scene(unsignedTxGrid(cpfpTx), 800, 500);
+                    Scene scene = new Scene(unsignedTxGrid(cpfpTx), 900, 500);
                     scenes.add(scene);
                     sceneCursor++;
                     stage.setScene(scene);
@@ -525,7 +526,7 @@ public class FeeBooster extends Application {
                 //    stage.setScene(new Scene(signTxGrid(tx), 800, 500));
                 //else if(signWalletRadio.isSelected())
                 if(sceneCursor == scenes.size() - 1) {
-                    Scene scene = new Scene(broadcastTxGrid(tx), 800, 500);
+                    Scene scene = new Scene(broadcastTxGrid(tx), 900, 500);
                     scenes.add(scene);
                     sceneCursor++;
                     stage.setScene(scene);
