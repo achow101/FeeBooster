@@ -43,11 +43,7 @@ public class FeeBooster extends Application {
     private EventHandler cancelEvent = new EventHandler<ActionEvent>() {
         @Override
         public void handle(ActionEvent event) {
-            Alert alert = new Alert(Alert.AlertType.WARNING, "Are you sure you want to exit?");
-            Optional<ButtonType> result = alert.showAndWait();
-            if (result.isPresent() && result.get() == ButtonType.OK) {
-                System.exit(0);
-            }
+            System.exit(0);
         }
     };
     private List<Scene> scenes = new ArrayList<Scene>();
@@ -599,6 +595,10 @@ public class FeeBooster extends Application {
         signedTxTxt.setWrapText(true);
         grid.add(signedTxTxt, 0, 1);
 
+        // Display some info about Transaction after sent
+        Text txInfo = new Text();
+        grid.add(txInfo, 0, 4);
+
         // Add Next Button
         Button nextBtn = new Button("Send Transaction");
         nextBtn.setOnAction(new EventHandler<ActionEvent>() {
@@ -606,6 +606,7 @@ public class FeeBooster extends Application {
             public void handle(ActionEvent event) {
                 Transaction signedTx = new Transaction();
                 Transaction.deserializeStr(signedTxTxt.getText(), signedTx);
+                txInfo.setText("Transaction being broadcast. TXID: " + signedTx.getHash() + "\nPlease wait a few minutes for best results, but you may now exit.");
                 Broadcaster.broadcastTransaction(Transaction.serialize(signedTx, false));
             }
         });
