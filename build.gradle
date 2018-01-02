@@ -1,0 +1,35 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.2'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'FeeBooster'
+    }
+}
+
+shadowJar {
+    version = 1.0
+}
+
+dependencies {
+    compile 'org.bitcoinj:bitcoinj-core:0.14.5'
+    compile 'org.json:json:20171018'
+    compile 'org.bouncycastle:bcprov-jdk15on:1.58'
+}
