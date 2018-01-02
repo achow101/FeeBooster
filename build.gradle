@@ -1,0 +1,15 @@
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    compile 'org.bitcoinj:bitcoinj-core:0.14.5'
+    compile 'org.json:json:20171018'
+    compile 'org.bouncycastle:bcprov-jdk15on:1.58'
+}
