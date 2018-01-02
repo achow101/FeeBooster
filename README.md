@@ -16,6 +16,12 @@ CPFP is a method of increasing the transaction fee by having the receiver create
 
 The Fee Booster does not handle private keys (yet). It simply produces the unsigned transaction and asks the user to sign the transaction. Then that transaction can be broadcast through the Fee Booster.
 
+## Building and Running
+
+```./gradlew clean shadowJar```
+
+```java -jar build/libs/FeeBooster-1.0-all.jar```
+
 ## License
 
 This Project is under the GNU General Public License version 3.

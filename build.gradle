@@ -1,4 +1,14 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:2.0.2'
+    }
+}
+
 apply plugin: 'java'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 repositories {
     mavenCentral()
@@ -7,6 +17,16 @@ repositories {
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'FeeBooster'
+    }
+}
+
+shadowJar {
+    version = 1.0
+}
 
 dependencies {
     compile 'org.bitcoinj:bitcoinj-core:0.14.5'

@@ -21,6 +21,7 @@ import org.bitcoinj.params.MainNetParams;
 
 import java.io.*;
 import java.net.InetSocketAddress;
+import java.util.Scanner;
 
 public class Broadcaster {
 
@@ -31,23 +32,20 @@ public class Broadcaster {
         PeerGroup peerGroup = new PeerGroup(params);
         peerGroup.setUserAgent("FeeBooster", "1.0");
         peerGroup.start();
-        try {
-            BufferedReader br = new BufferedReader(new FileReader("nodes.txt"));
-            String line;
-            while((line  = br.readLine()) != null)
+		InputStream inputStream = Broadcaster.class.getClassLoader().getResourceAsStream("nodes.txt");
+
+		try (Scanner scanner = new Scanner(inputStream)) {
+            while(scanner.hasNext())
             {
-                int colonIndex = line.indexOf(":");
+				String line = scanner.nextLine();
+				int colonIndex = line.indexOf(":");
                 String ip = line.substring(0, colonIndex);
                 int port = Integer.parseInt(line.substring(colonIndex + 1));
                 peerGroup.connectTo(new InetSocketAddress(ip, port));
                 peerGroup.broadcastTransaction(tx);
-                line = null;
             }
-
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
-    }
+	}
 
 }
